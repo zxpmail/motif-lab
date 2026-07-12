@@ -46,7 +46,7 @@ export default function ChatPanel({ session, onSessionUpdate }: ChatPanelProps) 
     <div className="h-full flex flex-col gap-6 p-6 overflow-auto">
       <header>
         <h1 className="text-3xl font-bold text-gray-900">授课</h1>
-        <p className="mt-1 text-lg text-gray-600">先故事，再动画，最后检验</p>
+        <p className="mt-1 text-lg text-gray-600">先母题寓言，再口诀检验（暂不生成动画）</p>
       </header>
 
       <form onSubmit={onSubmit} className="space-y-3">
@@ -108,7 +108,7 @@ export default function ChatPanel({ session, onSessionUpdate }: ChatPanelProps) 
               onClick={() => void run(() => rewrite(session.id))}
               className="text-lg px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
-              换个故事
+              换个故事（/重写）
             </button>
           </div>
         </div>

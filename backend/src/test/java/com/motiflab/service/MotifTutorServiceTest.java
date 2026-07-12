@@ -9,16 +9,16 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** MotifTutorService 会话状态机测试。关联：DemoCache、StoryboardService。 */
+/** MotifTutorService：金牌文字课；无动画。关联：DemoCache、StoryboardService。 */
 class MotifTutorServiceTest {
 
     private MotifTutorService newTutor(Path dir) {
         ConceptNormalizer n = new ConceptNormalizer();
-        return new MotifTutorService(n, new StoryboardService(n), new DemoCache(dir, "v1"));
+        return new MotifTutorService(n, new StoryboardService(n), new DemoCache(dir, "v3"));
     }
 
     @Test
-    void start_loop_setsStoryboardAndCachedDemo() throws Exception {
+    void start_loop_setsFableAndMotto_noAnimation() throws Exception {
         Path dir = Files.createTempDirectory("demo");
         MotifTutorService tutor = newTutor(dir);
         StartLessonRequest req = new StartLessonRequest();
@@ -27,8 +27,9 @@ class MotifTutorServiceTest {
         assertEquals(0, s.getLevel());
         assertEquals("MOTTO_QUIZ", s.getPhase());
         assertNotNull(s.getStoryboard());
-        assertNotNull(s.getDemoUrl());
-        assertTrue(s.getDemoUrl().startsWith("/api/demos/"));
+        assertNull(s.getDemoUrl());
+        assertNotNull(s.getFable());
+        assertFalse(s.getFable().isBlank());
         assertEquals(2, s.getQuiz().size());
     }
 
@@ -71,7 +72,7 @@ class MotifTutorServiceTest {
     }
 
     @Test
-    void start_variable_usesGoldDemo() throws Exception {
+    void start_variable_goldText() throws Exception {
         Path dir = Files.createTempDirectory("demo");
         MotifTutorService tutor = newTutor(dir);
         StartLessonRequest req = new StartLessonRequest();
@@ -79,12 +80,13 @@ class MotifTutorServiceTest {
         MotifSession s = tutor.start(req);
         assertEquals("variable", s.getConceptId());
         assertEquals("MOTTO_QUIZ", s.getPhase());
-        assertNotNull(s.getDemoUrl());
+        assertNull(s.getDemoUrl());
         assertTrue(s.getMotto().contains("盒子"));
+        assertNotNull(s.getFable());
     }
 
     @Test
-    void start_function_usesGoldDemo() throws Exception {
+    void start_function_goldText() throws Exception {
         Path dir = Files.createTempDirectory("demo");
         MotifTutorService tutor = newTutor(dir);
         StartLessonRequest req = new StartLessonRequest();
@@ -92,7 +94,7 @@ class MotifTutorServiceTest {
         MotifSession s = tutor.start(req);
         assertEquals("function", s.getConceptId());
         assertEquals("MOTTO_QUIZ", s.getPhase());
-        assertNotNull(s.getDemoUrl());
+        assertNull(s.getDemoUrl());
         assertTrue(s.getMotto().contains("机器"));
     }
 

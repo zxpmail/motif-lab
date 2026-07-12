@@ -2,6 +2,7 @@ package com.motiflab.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.motiflab.model.ContrastRow;
 import com.motiflab.model.QuizItem;
 import com.motiflab.model.Storyboard;
 import org.springframework.core.io.ClassPathResource;
@@ -14,14 +15,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 非金牌概念：用 LLM 一次生成真分镜 + 口诀 + 检验题。
+ * 用 LLM 生成母题文字教案（寓言+对照+提炼+口诀+题），不生成动画。
  * 关联：LlmClient、MotifTutorService、prompts/teaching-pack.md。
  */
 @Component
 public class TeachingPackGenerator {
 
-    /** 教案包：分镜、口诀、题 */
-    public record Pack(Storyboard storyboard, String motto, List<QuizItem> quiz) {}
+    /** 母题教案包 */
+    public record Pack(
+            Storyboard storyboard,
+            String fable,
+            String explanation,
+            List<ContrastRow> contrast,
+            String motif,
+            String motto,
+            List<QuizItem> quiz
+    ) {}
 
     private final LlmClient llm;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -32,7 +41,7 @@ public class TeachingPackGenerator {
         this.systemPrompt = loadSystemPrompt();
     }
 
-    /** 为概念生成教案包；解析失败抛 IllegalStateException */
+    /** 为概念生成母题教案；解析失败抛 IllegalStateException */
     public Pack generate(String conceptRaw, String conceptId, int level, String sceneSeed) {
         String user = buildUserPrompt(conceptRaw, conceptId, level, sceneSeed);
         String raw = llm.complete(systemPrompt, user);
@@ -45,27 +54,48 @@ public class TeachingPackGenerator {
         try {
             JsonNode root = mapper.readTree(json);
             String title = textOr(root, "title", conceptId);
+            String fable = textOr(root, "fable", "");
+            String explanation = textOr(root, "explanation", "");
+            String motif = textOr(root, "motif", "");
             String motto = textOr(root, "motto", "");
+            if (fable.isBlank() || fable.length() < 80) {
+                throw new IllegalStateException("母题寓言过短或缺失");
+            }
+            if (motif.isBlank()) {
+                throw new IllegalStateException("母题提炼缺失");
+            }
+            motif = normalizeMotif(motif);
             if (motto.isBlank() || motto.contains("先看懂故事")) {
-                throw new IllegalStateException("教案口诀不合格");
+                throw new IllegalStateException("口诀不合格");
             }
+
+            List<ContrastRow> contrast = new ArrayList<>();
+            JsonNode contrastNode = root.path("contrast");
+            if (contrastNode.isArray()) {
+                for (JsonNode row : contrastNode) {
+                    contrast.add(new ContrastRow(
+                            textOr(row, "story", ""),
+                            textOr(row, "concept", "")
+                    ));
+                    if (contrast.size() >= 3) {
+                        break;
+                    }
+                }
+            }
+            if (contrast.isEmpty()) {
+                throw new IllegalStateException("缺少对照表");
+            }
+
+            // 用对照表生成轻量 beats，供兼容旧 UI；主内容是寓言
             List<Storyboard.Beat> beats = new ArrayList<>();
-            JsonNode beatsNode = root.path("beats");
-            if (!beatsNode.isArray() || beatsNode.size() < 3) {
-                throw new IllegalStateException("教案分镜少于 3 拍");
+            for (ContrastRow row : contrast) {
+                beats.add(new Storyboard.Beat("对照", row.story(), row.concept(), motif));
             }
-            for (JsonNode b : beatsNode) {
-                beats.add(new Storyboard.Beat(
-                        textOr(b, "who", "角色"),
-                        textOr(b, "action", ""),
-                        textOr(b, "result", ""),
-                        textOr(b, "principle", "")
-                ));
-            }
+
             List<QuizItem> quiz = new ArrayList<>();
             JsonNode quizNode = root.path("quiz");
             if (!quizNode.isArray() || quizNode.size() < 2) {
-                throw new IllegalStateException("教案检验题不足 2 道");
+                throw new IllegalStateException("检验题不足 2 道");
             }
             int i = 1;
             for (JsonNode q : quizNode) {
@@ -93,6 +123,10 @@ public class TeachingPackGenerator {
             }
             return new Pack(
                     new Storyboard(conceptId, title, List.copyOf(beats)),
+                    fable,
+                    explanation,
+                    List.copyOf(contrast),
+                    motif,
                     motto,
                     List.copyOf(quiz)
             );
@@ -101,12 +135,33 @@ public class TeachingPackGenerator {
         }
     }
 
+    /** 统一箭头写法；没有箭头但够长也保留原文 */
+    private static String normalizeMotif(String motif) {
+        String m = motif.trim()
+                .replace("->", "→")
+                .replace("=>", "→")
+                .replace("⇒", "→");
+        if (!m.contains("→") && m.length() >= 8) {
+            // 模型常写成「A 多了，B 少了」——仍可用
+            return m;
+        }
+        if (!m.contains("→")) {
+            throw new IllegalStateException("母题提炼不合格（需要能看出 X 与 Y 的对照）");
+        }
+        return m;
+    }
+
     private static String buildUserPrompt(String conceptRaw, String conceptId, int level, String sceneSeed) {
+        String levelHint = switch (level) {
+            case 1 -> "更简单：人物更少、悖论更直白、句子更短。";
+            case 2 -> "极简：最短寓言，只留一个最狠的对照。";
+            default -> "标准母题深度。";
+        };
         return "概念原文：" + conceptRaw + "\n"
                 + "概念 id：" + conceptId + "\n"
-                + "简版等级：L" + level + "\n"
-                + "场景种子：" + (sceneSeed == null || sceneSeed.isBlank() ? "（无，自选具体故事）" : sceneSeed) + "\n"
-                + "请直接输出 JSON。";
+                + "简版等级：L" + level + "（" + levelHint + "）\n"
+                + "场景种子：" + (sceneSeed == null || sceneSeed.isBlank() ? "（无，自选完全不同的生活场景）" : sceneSeed) + "\n"
+                + "请直接输出 JSON。不要输出 HTML。";
     }
 
     private static String textOr(JsonNode node, String field, String fallback) {

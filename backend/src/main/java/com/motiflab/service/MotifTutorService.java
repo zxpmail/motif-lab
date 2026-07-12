@@ -1,11 +1,11 @@
 package com.motiflab.service;
 
 import com.motiflab.dto.StartLessonRequest;
+import com.motiflab.model.ContrastRow;
 import com.motiflab.model.MotifSession;
 import com.motiflab.model.QuizItem;
 import com.motiflab.model.Storyboard;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 母题授课会话状态机。
- * 金牌缓存命中同步进 MOTTO_QUIZ；未命中则异步：教案包 → 动画。
- * 关联：ConceptNormalizer、StoryboardService、DemoCache、AnimationGenerator、TeachingPackGenerator。
+ * 当前策略：只生成文字母题（寓言+对照+提炼+口诀+题），不生成动画 HTML。
+ * 关联：ConceptNormalizer、StoryboardService、DemoCache（仅缓存教案 JSON）、TeachingPackGenerator。
  */
 public class MotifTutorService {
 
@@ -28,38 +28,26 @@ public class MotifTutorService {
     private final ConceptNormalizer normalizer;
     private final StoryboardService storyboards;
     private final DemoCache demos;
-    /** 可空：单元测试或不启用生成时传 null */
-    private final AnimationGenerator generator;
-    /** 可空：非金牌教案生成 */
+    /** 可空：非金牌母题生成 */
     private final TeachingPackGenerator teachingPacks;
     private final ConcurrentHashMap<String, MotifSession> sessions = new ConcurrentHashMap<>();
 
     public MotifTutorService(ConceptNormalizer normalizer, StoryboardService storyboards, DemoCache demos) {
-        this(normalizer, storyboards, demos, null, null);
+        this(normalizer, storyboards, demos, null);
     }
 
     public MotifTutorService(
             ConceptNormalizer normalizer,
             StoryboardService storyboards,
             DemoCache demos,
-            AnimationGenerator generator) {
-        this(normalizer, storyboards, demos, generator, null);
-    }
-
-    public MotifTutorService(
-            ConceptNormalizer normalizer,
-            StoryboardService storyboards,
-            DemoCache demos,
-            AnimationGenerator generator,
             TeachingPackGenerator teachingPacks) {
         this.normalizer = normalizer;
         this.storyboards = storyboards;
         this.demos = demos;
-        this.generator = generator;
         this.teachingPacks = teachingPacks;
     }
 
-    /** 开始一课：建会话、取分镜、解析金牌 demo 或异步生成 */
+    /** 开始一课 */
     public MotifSession start(StartLessonRequest req) {
         String id = UUID.randomUUID().toString();
         MotifSession session = new MotifSession();
@@ -69,42 +57,43 @@ public class MotifTutorService {
         session.setLevel(0);
         session.setSceneSeed(null);
         session.setStoryboard(storyboards.getOrCreate(req.getConcept(), 0));
-        applyDemoAndPhase(session);
-        fillMottoQuizIfReady(session);
+        session.setDemoUrl(null);
+        applyLesson(session);
         sessions.put(id, session);
         return session;
     }
 
-    /** 升简版等级并换 demo */
+    /** 更简单一版寓言（升 L） */
     public MotifSession simplify(String sessionId) {
         MotifSession session = get(sessionId);
         resetProgressForRerun(session);
         session.setLevel(normalizer.clampLevel(session.getLevel() + 1));
-        applyDemoAndPhase(session);
-        fillMottoQuizIfReady(session);
+        applyLesson(session);
         return session;
     }
 
-    /** 重写：换 sceneSeed，轻微改分镜 who，再解析 demo */
+    /** /重写：换场景种子，重新生成寓言 */
     public MotifSession rewrite(String sessionId) {
         MotifSession session = get(sessionId);
         resetProgressForRerun(session);
         session.setSceneSeed(UUID.randomUUID().toString());
-        session.setStoryboard(renameFirstWho(session.getStoryboard(), "小红"));
-        applyDemoAndPhase(session);
-        fillMottoQuizIfReady(session);
+        applyLesson(session);
         return session;
     }
 
-    /** 再学一档/换故事前清空答题进度，并作废进行中的异步生成 */
     private void resetProgressForRerun(MotifSession session) {
         session.getCorrectQuizIds().clear();
         session.setGenerationToken(session.getGenerationToken() + 1);
         session.setMotto(null);
         session.setQuiz(null);
+        session.setFable(null);
+        session.setExplanation(null);
+        session.setContrast(null);
+        session.setMotif(null);
+        session.setDemoUrl(null);
+        session.setError(null);
     }
 
-    /** 按 id 取会话；不存在则抛 IllegalArgumentException */
     public MotifSession get(String sessionId) {
         MotifSession session = sessions.get(sessionId);
         if (session == null) {
@@ -113,10 +102,6 @@ public class MotifTutorService {
         return session;
     }
 
-    /**
-     * 答题：正确则记入 correctQuizIds；全部答对后 phase=DONE。
-     * @return 本题是否答对
-     */
     public boolean answer(String sessionId, String quizId, int choiceIndex) {
         MotifSession session = get(sessionId);
         List<QuizItem> quiz = session.getQuiz();
@@ -137,55 +122,70 @@ public class MotifTutorService {
         return correct;
     }
 
-    /** 答题结果：是否答对 + 更新后的会话 */
     public record AnswerResult(boolean correct, MotifSession session) {}
 
-    /** 答题并返回完整结果（供 HTTP 层包装） */
     public AnswerResult answerResult(String id, String quizId, int index) {
         boolean correct = answer(id, quizId, index);
         return new AnswerResult(correct, get(id));
     }
 
     /**
-     * 解析 demo：金牌/缓存命中 → URL + MOTTO_QUIZ；未命中 → DEMO + 异步生成。
+     * 金牌：同步文字教案；非金牌：教案缓存命中则恢复，否则异步生成母题（不生成动画）。
      */
-    private void applyDemoAndPhase(MotifSession session) {
+    private void applyLesson(MotifSession session) {
         session.setError(null);
-        Optional<Path> hit = demos.resolve(session.getConceptId(), session.getLevel(), session.getSceneSeed());
-        if (hit.isPresent()) {
-            // 非金牌若有教案缓存，恢复分镜口诀题，避免仍显示空壳占位
-            restorePackIfPresent(session);
-            session.setDemoUrl("/api/demos/" + session.getId());
+        session.setDemoUrl(null);
+
+        if (storyboards.isGold(session.getConceptId())) {
+            fillGoldLesson(session);
             session.setPhase("MOTTO_QUIZ");
-        } else {
-            session.setDemoUrl(null);
-            session.setPhase("DEMO");
-            startAsyncGeneration(session);
-        }
-    }
-
-    /** 从 sidecar 恢复教案；没有则忽略 */
-    private void restorePackIfPresent(MotifSession session) {
-        if (storyboards.isGold(session.getConceptId()) || teachingPacks == null) {
             return;
         }
-        Optional<String> json = demos.resolvePackJson(
+
+        Optional<String> cached = demos.resolvePackJson(
                 session.getConceptId(), session.getLevel(), session.getSceneSeed());
-        if (json.isEmpty()) {
-            return;
+        if (cached.isPresent() && teachingPacks != null) {
+            try {
+                TeachingPackGenerator.Pack pack = teachingPacks.parse(session.getConceptId(), cached.get());
+                applyPack(session, pack);
+                session.setPhase("MOTTO_QUIZ");
+                return;
+            } catch (RuntimeException ignored) {
+                // 旧格式缓存忽略，重新生成
+            }
         }
-        try {
-            TeachingPackGenerator.Pack pack = teachingPacks.parse(session.getConceptId(), json.get());
-            applyPack(session, pack);
-        } catch (RuntimeException ignored) {
-            // 旧缓存教案不合格时忽略，仍可播 HTML
-        }
+
+        session.setPhase("DEMO");
+        startAsyncFable(session);
     }
 
-    /** 缓存未命中时后台：非金牌先教案，再生成 HTML */
-    private void startAsyncGeneration(MotifSession session) {
-        if (generator == null) {
-            session.setError("动画生成器未就绪");
+    /** 金牌概念：口诀题 + 由分镜拼成的短文案（不调 LLM、不播动画） */
+    private void fillGoldLesson(MotifSession session) {
+        fillMottoQuiz(session);
+        Storyboard sb = session.getStoryboard();
+        if (sb == null || sb.beats() == null || sb.beats().isEmpty()) {
+            return;
+        }
+        StringBuilder fable = new StringBuilder();
+        List<ContrastRow> contrast = new ArrayList<>();
+        for (Storyboard.Beat beat : sb.beats()) {
+            fable.append(beat.who()).append(beat.action())
+                    .append("，于是").append(beat.result()).append("。");
+            contrast.add(new ContrastRow(beat.action() + " → " + beat.result(), beat.principle()));
+            if (contrast.size() >= 3) {
+                break;
+            }
+        }
+        session.setFable(fable.toString());
+        session.setExplanation(session.getMotto());
+        session.setContrast(List.copyOf(contrast));
+        session.setMotif(session.getMotto() == null ? sb.title() : session.getMotto());
+    }
+
+    /** 异步只生成母题文字教案 */
+    private void startAsyncFable(MotifSession session) {
+        if (teachingPacks == null) {
+            session.setError("请先在设置中配置并启用 LLM，才能生成母题寓言");
             return;
         }
         final String sessionId = session.getId();
@@ -194,48 +194,25 @@ public class MotifTutorService {
         final int level = session.getLevel();
         final String sceneSeed = session.getSceneSeed();
         final long token = session.getGenerationToken();
-        final boolean gold = storyboards.isGold(conceptId);
 
         CompletableFuture.runAsync(() -> {
             try {
+                TeachingPackGenerator.Pack pack =
+                        teachingPacks.generate(conceptRaw, conceptId, level, sceneSeed);
                 MotifSession live = sessions.get(sessionId);
                 if (live == null || live.getGenerationToken() != token) {
                     return;
                 }
-
-                Storyboard board = live.getStoryboard();
-                if (!gold) {
-                    if (teachingPacks == null) {
-                        live.setError("教案生成器未就绪");
-                        return;
-                    }
-                    TeachingPackGenerator.Pack pack =
-                            teachingPacks.generate(conceptRaw, conceptId, level, sceneSeed);
-                    if (live.getGenerationToken() != token) {
-                        return;
-                    }
-                    applyPack(live, pack);
-                    board = pack.storyboard();
-                    // 缓存教案 JSON，下次命中动画时可恢复分镜
-                    demos.putPackJson(conceptId, level, sceneSeed,
-                            toPackJson(pack));
-                }
-
-                String html = generator.generate(board, level, sceneSeed);
-                demos.put(conceptId, level, sceneSeed, html);
-                live = sessions.get(sessionId);
-                if (live == null || live.getGenerationToken() != token) {
-                    return;
-                }
-                live.setDemoUrl("/api/demos/" + sessionId);
+                applyPack(live, pack);
+                demos.putPackJson(conceptId, level, sceneSeed, toPackJson(pack));
                 live.setPhase("MOTTO_QUIZ");
                 live.setError(null);
-                fillMottoQuiz(live);
+                live.setDemoUrl(null);
             } catch (Exception e) {
                 MotifSession live = sessions.get(sessionId);
                 if (live != null && live.getGenerationToken() == token) {
                     String msg = e.getMessage();
-                    live.setError(msg == null || msg.isBlank() ? "动画生成失败" : msg);
+                    live.setError(msg == null || msg.isBlank() ? "母题生成失败" : msg);
                 }
             }
         });
@@ -243,27 +220,31 @@ public class MotifTutorService {
 
     private void applyPack(MotifSession session, TeachingPackGenerator.Pack pack) {
         session.setStoryboard(pack.storyboard());
+        session.setFable(pack.fable());
+        session.setExplanation(pack.explanation());
+        session.setContrast(pack.contrast());
+        session.setMotif(pack.motif());
         session.setMotto(pack.motto());
         session.setQuiz(pack.quiz());
+        session.setDemoUrl(null);
     }
 
-    /** 把 Pack 再序列化成可缓存的 JSON（字段与 prompt 约定一致） */
     private static String toPackJson(TeachingPackGenerator.Pack pack) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"title\":").append(jsonStr(pack.storyboard().title()));
+        sb.append(",\"fable\":").append(jsonStr(pack.fable()));
+        sb.append(",\"explanation\":").append(jsonStr(pack.explanation()));
+        sb.append(",\"motif\":").append(jsonStr(pack.motif()));
         sb.append(",\"motto\":").append(jsonStr(pack.motto()));
-        sb.append(",\"beats\":[");
-        List<Storyboard.Beat> beats = pack.storyboard().beats();
-        for (int i = 0; i < beats.size(); i++) {
-            Storyboard.Beat b = beats.get(i);
+        sb.append(",\"contrast\":[");
+        List<ContrastRow> contrast = pack.contrast();
+        for (int i = 0; i < contrast.size(); i++) {
             if (i > 0) {
                 sb.append(',');
             }
-            sb.append("{\"who\":").append(jsonStr(b.who()))
-                    .append(",\"action\":").append(jsonStr(b.action()))
-                    .append(",\"result\":").append(jsonStr(b.result()))
-                    .append(",\"principle\":").append(jsonStr(b.principle()))
-                    .append('}');
+            ContrastRow row = contrast.get(i);
+            sb.append("{\"story\":").append(jsonStr(row.story()))
+                    .append(",\"concept\":").append(jsonStr(row.concept())).append('}');
         }
         sb.append("],\"quiz\":[");
         List<QuizItem> quiz = pack.quiz();
@@ -295,14 +276,6 @@ public class MotifTutorService {
                 .replace("\n", "\\n").replace("\r", "") + "\"";
     }
 
-    /** 仅在已进入 MOTTO_QUIZ（金牌同步路径）时填充口诀与题 */
-    private void fillMottoQuizIfReady(MotifSession session) {
-        if ("MOTTO_QUIZ".equals(session.getPhase()) || "DONE".equals(session.getPhase())) {
-            fillMottoQuiz(session);
-        }
-    }
-
-    /** 金牌概念用专属口诀题；非金牌优先保留教案包已写内容 */
     private void fillMottoQuiz(MotifSession session) {
         String id = session.getConceptId();
         if ("loop".equals(id)) {
@@ -343,30 +316,6 @@ public class MotifTutorService {
                 new QuizItem("q2", "问好机里放进「小红」，会吐出什么？",
                     List.of("你好，小明", "你好，小红", "随便一句话"), 1)
             ));
-            return;
         }
-        // 非金牌：教案包已写入则保留
-        if (session.getMotto() != null && session.getQuiz() != null && !session.getQuiz().isEmpty()) {
-            return;
-        }
-        String title = session.getStoryboard() != null ? session.getStoryboard().title() : session.getConceptRaw();
-        session.setMotto(title + "：看清「笨办法哪里别扭、聪明办法哪里省事」。");
-        session.setQuiz(List.of(
-            new QuizItem("q1", "这一课最该抓住的是什么？",
-                List.of("概念的名字怎么读", "不用它时哪里别扭、用了哪里省事", "网页好不好看"), 1),
-            new QuizItem("q2", "如果动画只喊概念名、没有对照，说明什么？",
-                List.of("已经学懂了", "还没讲清原理，该换故事或更简单", "可以结束了"), 1)
-        ));
-    }
-
-    /** 复制分镜并把第一拍 who 改名，用于体现 rewrite 生效 */
-    private Storyboard renameFirstWho(Storyboard source, String newWho) {
-        if (source == null || source.beats() == null || source.beats().isEmpty()) {
-            return source;
-        }
-        List<Storyboard.Beat> beats = new ArrayList<>(source.beats());
-        Storyboard.Beat first = beats.get(0);
-        beats.set(0, new Storyboard.Beat(newWho, first.action(), first.result(), first.principle()));
-        return new Storyboard(source.conceptId(), source.title(), List.copyOf(beats));
     }
 }

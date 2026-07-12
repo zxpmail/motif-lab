@@ -1,46 +1,32 @@
-// 右侧舞台：分镜列表 + sandbox iframe。关联：LessonLayout、types。
+// 右侧：母题寓言 + 对照表 + 提炼（不再播动画）。关联：LessonLayout、types。
 import type { MotifSession } from '../types'
 
 interface StagePanelProps {
   session: MotifSession | null
 }
 
-/** 渲染分镜骨架；有 demoUrl 则 iframe 播放；DEMO 且无 url 显示生成中 */
+/** 展示母题文字；生成中提示等待 */
 export default function StagePanel({ session }: StagePanelProps) {
   if (!session) {
     return (
       <div className="h-full flex items-center justify-center text-xl text-gray-500 p-8">
-        输入概念后，这里会先出现分镜骨架
+        输入概念后，这里会出现母题寓言
       </div>
     )
   }
 
-  const { storyboard, demoUrl, phase, error } = session
-  const generating = phase === 'DEMO' && !demoUrl && !error
+  const { storyboard, fable, explanation, contrast, motif, phase, error } = session
+  const generating = phase === 'DEMO' && !fable && !error
 
   return (
-    <div className="h-full flex flex-col gap-4 p-6 overflow-auto">
+    <div className="h-full flex flex-col gap-5 p-6 overflow-auto">
       {storyboard && (
-        <section aria-label="分镜骨架" className="space-y-3">
-          <h2 className="text-2xl font-semibold text-gray-900">{storyboard.title}</h2>
-          <ol className="space-y-3 list-decimal list-inside text-lg text-gray-800">
-            {storyboard.beats.map((beat, i) => (
-              <li key={i} className="pl-1">
-                <span className="font-medium">{beat.who}</span>
-                ：{beat.action}
-                <span className="text-gray-600"> → {beat.result}</span>
-                <span className="block text-base text-gray-500 mt-0.5">
-                  原理：{beat.principle}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <h2 className="text-2xl font-semibold text-gray-900">{storyboard.title}</h2>
       )}
 
       {generating && (
         <p className="text-xl text-amber-700 animate-pulse">
-          正在写分镜并生成动画（新概念可能要几十秒）…
+          正在写母题寓言（通常十几秒到一分钟）…
         </p>
       )}
 
@@ -50,15 +36,49 @@ export default function StagePanel({ session }: StagePanelProps) {
         </p>
       )}
 
-      {demoUrl && (
-        <div className="flex-1 min-h-[280px] border border-gray-200 rounded-lg overflow-hidden bg-white">
-          <iframe
-            sandbox="allow-scripts"
-            src={demoUrl}
-            title="demo"
-            className="w-full h-full min-h-[280px] border-0"
-          />
-        </div>
+      {fable && (
+        <section aria-label="母题寓言" className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-700">寓言</h3>
+          <p className="text-xl leading-relaxed text-gray-900 whitespace-pre-wrap">{fable}</p>
+        </section>
+      )}
+
+      {explanation && (
+        <section aria-label="概念解释" className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-700">这是在讲什么</h3>
+          <p className="text-lg text-gray-800 whitespace-pre-wrap">{explanation}</p>
+        </section>
+      )}
+
+      {contrast && contrast.length > 0 && (
+        <section aria-label="对照表" className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-700">对照</h3>
+          <table className="w-full text-left text-lg border-collapse">
+            <thead>
+              <tr className="border-b border-gray-300">
+                <th className="py-2 pr-3 font-medium">故事里</th>
+                <th className="py-2 font-medium">概念里</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contrast.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100 align-top">
+                  <td className="py-2 pr-3 text-gray-800">{row.story}</td>
+                  <td className="py-2 text-gray-800">{row.concept}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {motif && (
+        <section aria-label="母题提炼" className="space-y-2">
+          <h3 className="text-lg font-medium text-gray-700">母题</h3>
+          <p className="text-xl font-semibold text-gray-900 border-l-4 border-amber-500 pl-4">
+            {motif}
+          </p>
+        </section>
       )}
     </div>
   )

@@ -86,10 +86,11 @@ export default function ProviderSettings({ onClose }: ProviderSettingsProps) {
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <p className="text-base text-gray-600 leading-relaxed">
-            本应用只支持 OpenAI 兼容接口。DeepSeek 请填
+            本应用当前以<strong>母题文字寓言</strong>为主，不再自动生成动画。
+            DeepSeek 请填
             <code className="mx-1 px-1 bg-gray-100 rounded">https://api.deepseek.com/v1</code>
             ，不要用 Tepeu 里的 <code className="mx-1 px-1 bg-gray-100 rounded">/anthropic</code> 地址。
-            循环/变量等金牌课不走模型；只有新概念或「换个故事」才用这里的配置。
+            循环/变量/条件/函数为内置金牌文字课；其它概念需启用 LLM 写寓言。
           </p>
 
           <label className="block space-y-1">

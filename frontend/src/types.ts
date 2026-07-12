@@ -35,6 +35,14 @@ export interface MotifSession {
   sceneSeed: string | null
   storyboard: Storyboard
   demoUrl: string | null
+  /** 母题寓言正文 */
+  fable?: string | null
+  /** 概念解释 */
+  explanation?: string | null
+  /** 对照表 */
+  contrast?: { story: string; concept: string }[] | null
+  /** 母题提炼 X → Y */
+  motif?: string | null
   motto: string | null
   quiz: QuizItem[]
   phase: LessonPhase

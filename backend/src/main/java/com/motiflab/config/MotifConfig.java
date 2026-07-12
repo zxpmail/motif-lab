@@ -1,6 +1,5 @@
 package com.motiflab.config;
 
-import com.motiflab.service.AnimationGenerator;
 import com.motiflab.service.ConceptNormalizer;
 import com.motiflab.service.DemoCache;
 import com.motiflab.service.MotifTutorService;
@@ -44,15 +43,14 @@ public class MotifConfig {
         return new DemoCache(Path.of(demoCacheDir), protocolVersion);
     }
 
-    /** 授课会话状态机（注入可选的 AnimationGenerator + TeachingPackGenerator） */
+    /** 授课会话：只注入教案生成器（不再注入动画生成器） */
     @Bean
     public MotifTutorService motifTutorService(
             ConceptNormalizer conceptNormalizer,
             StoryboardService storyboardService,
             DemoCache demoCache,
-            AnimationGenerator animationGenerator,
             TeachingPackGenerator teachingPackGenerator) {
         return new MotifTutorService(
-                conceptNormalizer, storyboardService, demoCache, animationGenerator, teachingPackGenerator);
+                conceptNormalizer, storyboardService, demoCache, teachingPackGenerator);
     }
 }

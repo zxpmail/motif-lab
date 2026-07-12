@@ -11,8 +11,8 @@ export default function LessonLayout() {
 
   useEffect(() => {
     if (!session) return
-    if (session.phase !== 'DEMO' || session.demoUrl) return
-    if (session.error) return
+    // 生成母题中：phase=DEMO 且尚无寓言
+    if (session.phase !== 'DEMO' || session.fable || session.error) return
 
     const id = session.id
     const timer = window.setInterval(() => {
@@ -24,7 +24,7 @@ export default function LessonLayout() {
     }, 1500)
 
     return () => window.clearInterval(timer)
-  }, [session?.id, session?.phase, session?.demoUrl, session?.error])
+  }, [session?.id, session?.phase, session?.fable, session?.error])
 
   return (
     <div className="h-full min-h-[calc(100vh-3rem)] grid grid-cols-1 md:grid-cols-2 bg-gray-50 text-gray-900">
