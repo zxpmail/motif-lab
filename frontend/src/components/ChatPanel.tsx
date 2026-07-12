@@ -71,7 +71,7 @@ export default function ChatPanel({ session, onSessionUpdate }: ChatPanelProps) 
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {['循环', '变量', '条件'].map((name) => (
+          {['循环', '变量', '条件', '函数'].map((name) => (
             <button
               key={name}
               type="button"

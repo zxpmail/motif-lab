@@ -27,7 +27,7 @@ class StoryboardServiceTest {
     }
 
     @Test
-    void variable_and_condition_useGoldStoryboard() {
+    void variable_condition_function_useGoldStoryboard() {
         StoryboardService svc = new StoryboardService(new ConceptNormalizer());
         Storyboard v = svc.getOrCreate("变量", 0);
         assertEquals("variable", v.conceptId());
@@ -35,5 +35,8 @@ class StoryboardServiceTest {
         Storyboard c = svc.getOrCreate("条件", 0);
         assertEquals("condition", c.conceptId());
         assertTrue(c.beats().size() >= 3);
+        Storyboard f = svc.getOrCreate("函数", 0);
+        assertEquals("function", f.conceptId());
+        assertTrue(f.beats().size() >= 3);
     }
 }

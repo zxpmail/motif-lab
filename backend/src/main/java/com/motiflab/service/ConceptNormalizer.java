@@ -5,7 +5,7 @@ import java.util.Locale;
 /** 概念名规范化与演示缓存键。关联：DemoCache、MotifTutorService。 */
 public class ConceptNormalizer {
 
-    /** 将用户输入的概念归一为稳定 id（编程金牌：loop / variable / condition） */
+    /** 将用户输入的概念归一为稳定 id（编程金牌：loop / variable / condition / function） */
     public String normalize(String raw) {
         if (raw == null) {
             return "unknown";
@@ -23,6 +23,11 @@ public class ConceptNormalizer {
                 || s.contains("condition") || s.contains("else") || s.contains("if语句")
                 || s.matches(".*\\bif\\b.*")) {
             return "condition";
+        }
+        // 函数：避免单独匹配 fun（误伤 funny 等）
+        if (s.contains("函数") || s.contains("function") || s.contains("方法")
+                || s.contains("调用") && (s.contains("函") || s.contains("function"))) {
+            return "function";
         }
         return s.replaceAll("[^a-z0-9\\u4e00-\\u9fff]+", "-");
     }

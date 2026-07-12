@@ -18,7 +18,7 @@ import java.util.Set;
 public class StoryboardService {
 
     /** 已内置金牌分镜的概念 id */
-    private static final Set<String> GOLD_CONCEPTS = Set.of("loop", "variable", "condition");
+    private static final Set<String> GOLD_CONCEPTS = Set.of("loop", "variable", "condition", "function");
 
     private final ConceptNormalizer normalizer;
     private final ObjectMapper mapper = new ObjectMapper();

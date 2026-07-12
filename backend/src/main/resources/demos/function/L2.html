@@ -1,0 +1,33 @@
+<!-- motif-lab gold: function L2 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>函数 L2</title>
+  <style>
+    body {
+      min-height: 100vh; margin: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem;
+      font-family: "Microsoft YaHei", sans-serif; background: #fff;
+    }
+    .big { font-size: 2.2rem; font-weight: 900; color: #5e35b1; text-align: center; }
+    .tag { font-size: 1.4rem; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="tag">输入 → 函数 → 输出</div>
+  <div class="big" id="line">小红 → 问好 → 你好，小红</div>
+  <script>
+    const line = document.getElementById('line');
+    const frames = [
+      '小红 → 问好 → 你好，小红',
+      '小刚 → 问好 → 你好，小刚'
+    ];
+    let i = 0;
+    setInterval(() => {
+      i = (i + 1) % frames.length;
+      line.textContent = frames[i];
+    }, 1800);
+  </script>
+</body>
+</html>

@@ -23,6 +23,7 @@ public class MotifTutorService {
     private static final String LOOP_MOTTO = "循环就是同一件事，按次数做多遍。";
     private static final String VARIABLE_MOTTO = "变量是贴了名字的盒子，里面的东西可以改。";
     private static final String CONDITION_MOTTO = "条件就是看情况，选一条该走的路。";
+    private static final String FUNCTION_MOTTO = "函数像一台有名字的机器：放进输入，按固定步骤，吐出结果。";
 
     private final ConceptNormalizer normalizer;
     private final StoryboardService storyboards;
@@ -221,6 +222,16 @@ public class MotifTutorService {
                     List.of("把所有路都走一遍", "根据情况选一条路", "永远只走左边"), 1),
                 new QuizItem("q2", "下雨时该走哪条？",
                     List.of("阳光路", "伞路", "原地不动"), 1)
+            ));
+            return;
+        }
+        if ("function".equals(id)) {
+            session.setMotto(FUNCTION_MOTTO);
+            session.setQuiz(List.of(
+                new QuizItem("q1", "函数最像什么？",
+                    List.of("随便猜结果的盒子", "有名字的机器：进料→固定步骤→出结果", "只能用一次的火柴"), 1),
+                new QuizItem("q2", "问好机里放进「小红」，会吐出什么？",
+                    List.of("你好，小明", "你好，小红", "随便一句话"), 1)
             ));
             return;
         }

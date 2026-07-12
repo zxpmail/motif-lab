@@ -84,6 +84,19 @@ class MotifTutorServiceTest {
     }
 
     @Test
+    void start_function_usesGoldDemo() throws Exception {
+        Path dir = Files.createTempDirectory("demo");
+        MotifTutorService tutor = newTutor(dir);
+        StartLessonRequest req = new StartLessonRequest();
+        req.setConcept("函数");
+        MotifSession s = tutor.start(req);
+        assertEquals("function", s.getConceptId());
+        assertEquals("MOTTO_QUIZ", s.getPhase());
+        assertNotNull(s.getDemoUrl());
+        assertTrue(s.getMotto().contains("机器"));
+    }
+
+    @Test
     void simplify_afterDone_clearsQuizProgress() throws Exception {
         Path dir = Files.createTempDirectory("demo");
         MotifTutorService tutor = newTutor(dir);

@@ -23,6 +23,14 @@ class ConceptNormalizerTest {
     }
 
     @Test
+    void normalize_function() {
+        ConceptNormalizer n = new ConceptNormalizer();
+        assertEquals("function", n.normalize("函数"));
+        assertEquals("function", n.normalize("Function"));
+        assertEquals("function", n.normalize("写个方法"));
+    }
+
+    @Test
     void cacheKey_includesLevelAndProtocol() {
         ConceptNormalizer n = new ConceptNormalizer();
         assertEquals("loop|L0|v1", n.cacheKey("循环", 0, "v1"));
