@@ -85,13 +85,20 @@ export default function ProviderSettings({ onClose }: ProviderSettingsProps) {
         <p className="text-gray-500">加载中…</p>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
+          <p className="text-base text-gray-600 leading-relaxed">
+            本应用只支持 OpenAI 兼容接口。DeepSeek 请填
+            <code className="mx-1 px-1 bg-gray-100 rounded">https://api.deepseek.com/v1</code>
+            ，不要用 Tepeu 里的 <code className="mx-1 px-1 bg-gray-100 rounded">/anthropic</code> 地址。
+            循环/变量等金牌课不走模型；只有新概念或「换个故事」才用这里的配置。
+          </p>
+
           <label className="block space-y-1">
             <span className="text-lg">baseUrl</span>
             <input
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               className="w-full text-lg px-3 py-2 rounded-lg border border-gray-300"
-              placeholder="https://api.openai.com/v1"
+              placeholder="https://api.deepseek.com/v1"
             />
           </label>
 
@@ -101,7 +108,7 @@ export default function ProviderSettings({ onClose }: ProviderSettingsProps) {
               value={model}
               onChange={(e) => setModel(e.target.value)}
               className="w-full text-lg px-3 py-2 rounded-lg border border-gray-300"
-              placeholder="gpt-4o-mini"
+              placeholder="deepseek-chat"
             />
           </label>
 

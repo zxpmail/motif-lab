@@ -47,7 +47,8 @@ public class LlmClient {
             throw new IllegalStateException("请先在设置中填写 model");
         }
 
-        String url = joinChatCompletions(p.baseUrl());
+        String normalizedBase = normalizeOpenAiCompatibleBaseUrl(p.baseUrl());
+        String url = joinChatCompletions(normalizedBase);
         ObjectNode body = mapper.createObjectNode();
         body.put("model", p.model());
         ArrayNode messages = body.putArray("messages");
@@ -64,8 +65,7 @@ public class LlmClient {
                     .build();
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException(
-                        "LLM 调用失败 HTTP " + response.statusCode() + ": " + truncate(response.body()));
+                throw new IllegalStateException(formatHttpError(response.statusCode(), url, response.body()));
             }
             return extractContent(response.body());
         } catch (IllegalStateException e) {
@@ -78,16 +78,57 @@ public class LlmClient {
         }
     }
 
-    /** baseUrl 去尾斜杠后拼接 /chat/completions */
-    private static String joinChatCompletions(String baseUrl) {
+    /**
+     * 将用户填写的 baseUrl 规范为 OpenAI 兼容根路径（可再拼 /chat/completions）。
+     * 常见误填：Tepeu 的 DeepSeek Anthropic 地址 {@code .../anthropic}。
+     */
+    static String normalizeOpenAiCompatibleBaseUrl(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return baseUrl;
+        }
         String base = baseUrl.trim();
         while (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
         }
         if (base.endsWith("/chat/completions")) {
+            base = base.substring(0, base.length() - "/chat/completions".length());
+            while (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+        }
+        // Tepeu Anthropic 兼容地址 → DeepSeek OpenAI 兼容
+        if (base.endsWith("/anthropic")) {
+            String root = base.substring(0, base.length() - "/anthropic".length());
+            if (root.toLowerCase().contains("deepseek.com")) {
+                return root + "/v1";
+            }
+            return base;
+        }
+        int scheme = base.indexOf("://");
+        String afterScheme = scheme >= 0 ? base.substring(scheme + 3) : base;
+        // 仅主机根路径时补 /v1（DeepSeek / OpenAI 常见写法）
+        if (!afterScheme.contains("/")) {
+            return base + "/v1";
+        }
+        return base;
+    }
+
+    /** baseUrl 去尾斜杠后拼接 /chat/completions */
+    private static String joinChatCompletions(String baseUrl) {
+        String base = normalizeOpenAiCompatibleBaseUrl(baseUrl);
+        if (base.endsWith("/chat/completions")) {
             return base;
         }
         return base + "/chat/completions";
+    }
+
+    /** 拼可读错误；404 时提示 baseUrl 形态 */
+    private static String formatHttpError(int status, String url, String body) {
+        String hint = "";
+        if (status == 404) {
+            hint = "（Motif Lab 只用 OpenAI 兼容 /chat/completions；DeepSeek 请填 https://api.deepseek.com/v1，不要填 /anthropic）";
+        }
+        return "LLM 调用失败 HTTP " + status + hint + " @ " + url + ": " + truncate(body);
     }
 
     private String extractContent(String json) throws IOException {

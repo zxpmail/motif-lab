@@ -56,7 +56,9 @@ public class ProviderService {
         if (existing == null) {
             existing = new Stored();
         }
-        existing.baseUrl = dto.getBaseUrl() == null ? "" : dto.getBaseUrl().trim();
+        String rawBase = dto.getBaseUrl() == null ? "" : dto.getBaseUrl().trim();
+        // 保存时规范化，避免把 Tepeu 的 /anthropic 地址原样留下导致调用 404
+        existing.baseUrl = rawBase.isEmpty() ? "" : LlmClient.normalizeOpenAiCompatibleBaseUrl(rawBase);
         existing.model = dto.getModel() == null ? "" : dto.getModel().trim();
         existing.enabled = dto.isEnabled();
 
