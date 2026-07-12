@@ -1,0 +1,10 @@
+{
+  "concept": "loop",
+  "title": "循环",
+  "beats": [
+    {"who": "小明", "action": "拿起一块积木", "result": "手里有1块", "principle": "开始一次动作"},
+    {"who": "小明", "action": "再拿一块叠上去", "result": "变成2块", "principle": "同样动作再做一次"},
+    {"who": "小明", "action": "再叠一次", "result": "变成3块", "principle": "重复直到次数用完"},
+    {"who": "旁白", "action": "停下来", "result": "塔高3", "principle": "循环=同一件事做多遍"}
+  ]
+}

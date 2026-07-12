@@ -1,0 +1,98 @@
+<!-- motif-lab gold: loop L2 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>循环 L2</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.6rem;
+      background: linear-gradient(160deg, #e8f6ff 0%, #fff8e8 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: #2a3a4a;
+    }
+    .hint {
+      font-size: 1.1rem;
+      color: #607d8b;
+    }
+    .stage {
+      position: relative;
+      width: 200px;
+      height: 160px;
+    }
+    .block {
+      position: absolute;
+      left: 50%;
+      margin-left: -40px;
+      width: 80px;
+      height: 36px;
+      border-radius: 6px;
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    .block.b1 { background: #ff8a65; bottom: 0; }
+    .block.b2 { background: #ffd54f; bottom: 40px; }
+    .block.b3 { background: #81c784; bottom: 80px; }
+    .block.show {
+      opacity: 1;
+      animation: pop 0.5s ease forwards;
+    }
+    @keyframes pop {
+      from { transform: scale(0.6); opacity: 0.3; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .counter {
+      font-size: 6rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #ef6c00;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+  <p class="hint">重复三次叠积木</p>
+  <div class="stage" aria-hidden="true">
+    <div class="block b1" id="b1"></div>
+    <div class="block b2" id="b2"></div>
+    <div class="block b3" id="b3"></div>
+  </div>
+  <div class="counter" id="count">0</div>
+  <script>
+    (function () {
+      var countEl = document.getElementById("count");
+      var blocks = [
+        document.getElementById("b1"),
+        document.getElementById("b2"),
+        document.getElementById("b3")
+      ];
+      function sleep(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+      }
+      async function loop() {
+        while (true) {
+          for (var k = 0; k < 3; k++) {
+            blocks[k].classList.remove("show");
+          }
+          countEl.textContent = "0";
+          await sleep(500);
+          for (var i = 0; i < 3; i++) {
+            blocks[i].classList.add("show");
+            countEl.textContent = String(i + 1);
+            await sleep(800);
+          }
+          await sleep(1600);
+        }
+      }
+      loop();
+    })();
+  </script>
+</body>
+</html>

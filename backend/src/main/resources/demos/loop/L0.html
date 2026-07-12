@@ -1,0 +1,148 @@
+<!-- motif-lab gold: loop L0 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>循环 L0</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.2rem;
+      background: linear-gradient(160deg, #e8f6ff 0%, #fff8e8 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: #2a3a4a;
+    }
+    .stage {
+      position: relative;
+      width: 280px;
+      height: 220px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(40, 80, 120, 0.12);
+      overflow: hidden;
+    }
+    .floor {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 28px;
+      background: #d4e8c8;
+    }
+    .kid {
+      position: absolute;
+      bottom: 28px;
+      left: 36px;
+      width: 40px;
+      height: 70px;
+      transition: left 0.5s ease;
+    }
+    .kid .head {
+      width: 28px; height: 28px;
+      margin: 0 auto;
+      background: #ffcc99;
+      border-radius: 50%;
+    }
+    .kid .body {
+      width: 32px; height: 36px;
+      margin: 2px auto 0;
+      background: #5b8def;
+      border-radius: 8px 8px 4px 4px;
+    }
+    .kid.walk-right { left: 150px; }
+    .block {
+      position: absolute;
+      width: 44px; height: 28px;
+      left: 168px;
+      border-radius: 4px;
+      opacity: 0;
+      transform: translateY(-40px);
+    }
+    .block.b1 { background: #ff8a65; bottom: 28px; }
+    .block.b2 { background: #ffd54f; bottom: 56px; }
+    .block.b3 { background: #81c784; bottom: 84px; }
+    .block.show {
+      opacity: 1;
+      animation: drop-in 0.45s ease forwards;
+    }
+    @keyframes drop-in {
+      from { transform: translateY(-40px); opacity: 0.4; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .counter {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #ef6c00;
+      min-height: 2.6rem;
+    }
+    .counter span {
+      display: inline-block;
+      min-width: 1.2em;
+      text-align: center;
+    }
+    .narration {
+      font-size: 1.05rem;
+      max-width: 90vw;
+      text-align: center;
+      min-height: 1.5em;
+      color: #455a64;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" aria-hidden="true">
+    <div class="kid" id="kid">
+      <div class="head"></div>
+      <div class="body"></div>
+    </div>
+    <div class="block b1" id="b1"></div>
+    <div class="block b2" id="b2"></div>
+    <div class="block b3" id="b3"></div>
+    <div class="floor"></div>
+  </div>
+  <div class="counter">循环：<span id="count">0</span></div>
+  <p class="narration" id="narration">拿积木，叠高，再做一遍。</p>
+  <script>
+    (function () {
+      var kid = document.getElementById("kid");
+      var countEl = document.getElementById("count");
+      var blocks = [
+        document.getElementById("b1"),
+        document.getElementById("b2"),
+        document.getElementById("b3")
+      ];
+      var i = 0;
+      function sleep(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+      }
+      async function runOnce(n) {
+        kid.classList.add("walk-right");
+        await sleep(500);
+        blocks[n].classList.add("show");
+        countEl.textContent = String(n + 1);
+        await sleep(400);
+        kid.classList.remove("walk-right");
+        await sleep(500);
+      }
+      async function loop() {
+        while (true) {
+          for (var k = 0; k < 3; k++) {
+            blocks[k].classList.remove("show");
+          }
+          countEl.textContent = "0";
+          await sleep(400);
+          for (i = 0; i < 3; i++) {
+            await runOnce(i);
+          }
+          await sleep(1200);
+        }
+      }
+      loop();
+    })();
+  </script>
+</body>
+</html>
