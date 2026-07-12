@@ -69,4 +69,20 @@ class MotifTutorServiceTest {
         assertTrue(tutor.answer(s.getId(), "q2", 1));
         assertEquals("DONE", tutor.get(s.getId()).getPhase());
     }
+
+    @Test
+    void simplify_afterDone_clearsQuizProgress() throws Exception {
+        Path dir = Files.createTempDirectory("demo");
+        MotifTutorService tutor = newTutor(dir);
+        StartLessonRequest req = new StartLessonRequest();
+        req.setConcept("循环");
+        MotifSession s = tutor.start(req);
+        tutor.answer(s.getId(), "q1", 1);
+        tutor.answer(s.getId(), "q2", 1);
+        assertEquals("DONE", tutor.get(s.getId()).getPhase());
+        MotifSession again = tutor.simplify(s.getId());
+        assertTrue(again.getCorrectQuizIds().isEmpty());
+        assertEquals("MOTTO_QUIZ", again.getPhase());
+        assertEquals(1, again.getLevel());
+    }
 }

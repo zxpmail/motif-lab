@@ -24,6 +24,8 @@ public class MotifSession {
     private String error;
     /** 已答对的题目 id，用于判定 DONE */
     private Set<String> correctQuizIds = new HashSet<>();
+    /** 异步生成世代号；simplify/rewrite 时递增，过期任务不得写回 */
+    private long generationToken;
 
     public String getId() {
         return id;
@@ -119,5 +121,13 @@ public class MotifSession {
 
     public void setCorrectQuizIds(Set<String> correctQuizIds) {
         this.correctQuizIds = correctQuizIds;
+    }
+
+    public long getGenerationToken() {
+        return generationToken;
+    }
+
+    public void setGenerationToken(long generationToken) {
+        this.generationToken = generationToken;
     }
 }

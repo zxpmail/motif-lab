@@ -63,6 +63,7 @@ public class MotifTutorService {
     /** 升简版等级并换 demo */
     public MotifSession simplify(String sessionId) {
         MotifSession session = get(sessionId);
+        resetProgressForRerun(session);
         session.setLevel(normalizer.clampLevel(session.getLevel() + 1));
         applyDemoAndPhase(session);
         fillMottoQuizIfReady(session);
@@ -72,11 +73,20 @@ public class MotifTutorService {
     /** 重写：换 sceneSeed，轻微改分镜 who，再解析 demo */
     public MotifSession rewrite(String sessionId) {
         MotifSession session = get(sessionId);
+        resetProgressForRerun(session);
         session.setSceneSeed(UUID.randomUUID().toString());
         session.setStoryboard(renameFirstWho(session.getStoryboard(), "小红"));
         applyDemoAndPhase(session);
         fillMottoQuizIfReady(session);
         return session;
+    }
+
+    /** 再学一档/换故事前清空答题进度，并作废进行中的异步生成 */
+    private void resetProgressForRerun(MotifSession session) {
+        session.getCorrectQuizIds().clear();
+        session.setGenerationToken(session.getGenerationToken() + 1);
+        session.setMotto(null);
+        session.setQuiz(null);
     }
 
     /** 按 id 取会话；不存在则抛 IllegalArgumentException */
@@ -148,13 +158,14 @@ public class MotifTutorService {
         final int level = session.getLevel();
         final Storyboard board = session.getStoryboard();
         final String sceneSeed = session.getSceneSeed();
+        final long token = session.getGenerationToken();
 
         CompletableFuture.runAsync(() -> {
             try {
                 String html = generator.generate(board, level, sceneSeed);
                 demos.put(conceptId, level, html);
                 MotifSession live = sessions.get(sessionId);
-                if (live == null) {
+                if (live == null || live.getGenerationToken() != token) {
                     return;
                 }
                 live.setDemoUrl("/api/demos/" + sessionId);
@@ -163,7 +174,7 @@ public class MotifTutorService {
                 fillMottoQuiz(live);
             } catch (Exception e) {
                 MotifSession live = sessions.get(sessionId);
-                if (live != null) {
+                if (live != null && live.getGenerationToken() == token) {
                     String msg = e.getMessage();
                     live.setError(msg == null || msg.isBlank() ? "动画生成失败" : msg);
                 }
