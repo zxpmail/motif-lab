@@ -26,9 +26,10 @@ class DemoCacheTest {
     }
 
     @Test
-    void resolve_missing_returnsEmpty() throws Exception {
+    void resolve_variableAndConditionGold() throws Exception {
         Path dir = Files.createTempDirectory("demo-cache");
         DemoCache cache = new DemoCache(dir, "v1");
-        assertTrue(cache.resolve("nope", 0).isEmpty());
+        assertTrue(Files.readString(cache.resolve("variable", 0).orElseThrow()).contains("variable L0"));
+        assertTrue(Files.readString(cache.resolve("condition", 1).orElseThrow()).contains("condition L1"));
     }
 }

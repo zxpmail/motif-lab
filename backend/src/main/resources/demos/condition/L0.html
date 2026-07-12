@@ -1,0 +1,86 @@
+<!-- motif-lab gold: condition L0 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>条件 L0</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem;
+      background: linear-gradient(180deg, #bbdefb, #e8f5e9);
+      font-family: "Microsoft YaHei", sans-serif; color: #333;
+    }
+    .stage {
+      width: 320px; height: 220px; background: #fff; border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.08); position: relative; overflow: hidden;
+    }
+    .sky { position: absolute; inset: 0 0 90px 0; background: #90caf9; transition: .6s; }
+    .sky.rain { background: #78909c; }
+    .road { position: absolute; left: 0; right: 0; bottom: 0; height: 90px; background: #a5d6a7; }
+    .sign-l, .sign-r {
+      position: absolute; bottom: 100px; padding: 6px 10px; border-radius: 8px;
+      font-weight: 700; font-size: .95rem;
+    }
+    .sign-l { left: 24px; background: #b3e5fc; }
+    .sign-r { right: 24px; background: #fff9c4; }
+    .kid {
+      position: absolute; bottom: 40px; left: 140px; width: 36px; height: 60px; transition: left .8s ease;
+    }
+    .kid .h { width: 24px; height: 24px; margin: 0 auto; background: #ffcc99; border-radius: 50%; }
+    .kid .b { width: 28px; height: 30px; margin: 2px auto 0; background: #42a5f5; border-radius: 6px; }
+    .kid.left { left: 40px; }
+    .kid.right { left: 240px; }
+    .drop {
+      position: absolute; width: 4px; height: 12px; background: #1565c0; border-radius: 2px;
+      opacity: 0; animation: fall 0.8s linear infinite;
+    }
+    .sky.rain .drop { opacity: .8; }
+    @keyframes fall { from { transform: translateY(0); } to { transform: translateY(80px); } }
+    .narration { font-size: 1.15rem; min-height: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="sky" id="sky">
+      <div class="drop" style="left:40px;top:10px;animation-delay:0s"></div>
+      <div class="drop" style="left:90px;top:0;animation-delay:.2s"></div>
+      <div class="drop" style="left:150px;top:8px;animation-delay:.4s"></div>
+      <div class="drop" style="left:210px;top:4px;animation-delay:.1s"></div>
+      <div class="drop" style="left:270px;top:12px;animation-delay:.3s"></div>
+    </div>
+    <div class="sign-l">伞路</div>
+    <div class="sign-r">阳光路</div>
+    <div class="road"></div>
+    <div class="kid" id="kid"><div class="h"></div><div class="b"></div></div>
+  </div>
+  <p class="narration" id="say">到了分岔路口</p>
+  <script>
+    const sky = document.getElementById('sky');
+    const kid = document.getElementById('kid');
+    const say = document.getElementById('say');
+    async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    async function run() {
+      while (true) {
+        sky.classList.remove('rain');
+        kid.className = 'kid';
+        say.textContent = '到了分岔路口';
+        await sleep(1200);
+        sky.classList.add('rain');
+        say.textContent = '下雨了！如果下雨 → 走伞路';
+        await sleep(1000);
+        kid.classList.add('left');
+        await sleep(1600);
+        sky.classList.remove('rain');
+        kid.className = 'kid';
+        say.textContent = '假如不下雨 → 走阳光路';
+        await sleep(900);
+        kid.classList.add('right');
+        await sleep(1800);
+      }
+    }
+    run();
+  </script>
+</body>
+</html>

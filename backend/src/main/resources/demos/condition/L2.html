@@ -1,0 +1,26 @@
+<!-- motif-lab gold: condition L2 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>条件 L2</title>
+  <style>
+    body {
+      min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center;
+      font-family: "Microsoft YaHei", sans-serif; background: #fff;
+    }
+    .big { font-size: 2.2rem; font-weight: 800; text-align: center; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="big" id="t">如果下雨<br>→ 走伞路</div>
+  <script>
+    const t = document.getElementById('t');
+    let rain = true;
+    setInterval(() => {
+      rain = !rain;
+      t.innerHTML = rain ? '如果下雨<br>→ 走伞路' : '如果不下雨<br>→ 走阳光路';
+    }, 1800);
+  </script>
+</body>
+</html>

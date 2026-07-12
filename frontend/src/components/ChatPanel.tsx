@@ -70,17 +70,22 @@ export default function ChatPanel({ session, onSessionUpdate }: ChatPanelProps) 
             开始
           </button>
         </div>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => {
-            setConcept('循环')
-            void run(() => startLesson('循环'))
-          }}
-          className="text-lg px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
-        >
-          循环
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {['循环', '变量', '条件'].map((name) => (
+            <button
+              key={name}
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setConcept(name)
+                void run(() => startLesson(name))
+              }}
+              className="text-lg px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
       </form>
 
       {session && (

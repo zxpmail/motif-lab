@@ -1,0 +1,30 @@
+<!-- motif-lab gold: variable L2 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>变量 L2</title>
+  <style>
+    body {
+      min-height: 100vh; margin: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem;
+      font-family: "Microsoft YaHei", sans-serif; background: #fff;
+    }
+    .big { font-size: 5rem; font-weight: 900; color: #ef6c00; }
+    .tag { font-size: 1.6rem; }
+  </style>
+</head>
+<body>
+  <div class="tag">名字：苹果数</div>
+  <div class="big" id="val">3 → 5</div>
+  <div class="tag">值会变</div>
+  <script>
+    const val = document.getElementById('val');
+    let on = false;
+    setInterval(() => {
+      on = !on;
+      val.textContent = on ? '5' : '3';
+    }, 1600);
+  </script>
+</body>
+</html>

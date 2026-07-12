@@ -25,4 +25,15 @@ class StoryboardServiceTest {
         assertNotNull(sb.title());
         assertTrue(sb.beats().size() >= 1);
     }
+
+    @Test
+    void variable_and_condition_useGoldStoryboard() {
+        StoryboardService svc = new StoryboardService(new ConceptNormalizer());
+        Storyboard v = svc.getOrCreate("变量", 0);
+        assertEquals("variable", v.conceptId());
+        assertTrue(v.beats().size() >= 3);
+        Storyboard c = svc.getOrCreate("条件", 0);
+        assertEquals("condition", c.conceptId());
+        assertTrue(c.beats().size() >= 3);
+    }
 }

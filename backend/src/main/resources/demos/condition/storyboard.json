@@ -1,0 +1,10 @@
+{
+  "concept": "condition",
+  "title": "条件",
+  "beats": [
+    {"who": "小明", "action": "走到分岔路口", "result": "左边有伞，右边是阳光", "principle": "先看到两条路"},
+    {"who": "天空", "action": "开始下雨", "result": "地上湿了", "principle": "出现一个「情况」"},
+    {"who": "小明", "action": "看情况选左边", "result": "撑伞平安走过", "principle": "如果下雨 → 走伞路"},
+    {"who": "旁白", "action": "假如不下雨", "result": "就会走阳光那条", "principle": "条件=看情况选一条路"}
+  ]
+}

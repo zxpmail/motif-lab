@@ -21,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MotifTutorService {
 
     private static final String LOOP_MOTTO = "循环就是同一件事，按次数做多遍。";
+    private static final String VARIABLE_MOTTO = "变量是贴了名字的盒子，里面的东西可以改。";
+    private static final String CONDITION_MOTTO = "条件就是看情况，选一条该走的路。";
 
     private final ConceptNormalizer normalizer;
     private final StoryboardService storyboards;
@@ -189,15 +191,36 @@ public class MotifTutorService {
         }
     }
 
-    /** loop 用金牌口诀题；其它概念用通用口诀题 */
+    /** 金牌概念用专属口诀题；其它用通用试做题 */
     private void fillMottoQuiz(MotifSession session) {
-        if ("loop".equals(session.getConceptId())) {
+        String id = session.getConceptId();
+        if ("loop".equals(id)) {
             session.setMotto(LOOP_MOTTO);
             session.setQuiz(List.of(
                 new QuizItem("q1", "循环在做什么？",
                     List.of("只做一次", "同样动作做多遍", "随便做"), 1),
                 new QuizItem("q2", "上面叠积木叠了几次？",
                     List.of("1", "3", "10"), 1)
+            ));
+            return;
+        }
+        if ("variable".equals(id)) {
+            session.setMotto(VARIABLE_MOTTO);
+            session.setQuiz(List.of(
+                new QuizItem("q1", "变量最像什么？",
+                    List.of("永远不能改的石头", "贴了名字、里面能换东西的盒子", "一把锁"), 1),
+                new QuizItem("q2", "苹果数从 3 变成 5，说明什么？",
+                    List.of("名字也必须改成新名字", "名字可以不变，值可以变", "盒子坏了"), 1)
+            ));
+            return;
+        }
+        if ("condition".equals(id)) {
+            session.setMotto(CONDITION_MOTTO);
+            session.setQuiz(List.of(
+                new QuizItem("q1", "条件在帮你做什么？",
+                    List.of("把所有路都走一遍", "根据情况选一条路", "永远只走左边"), 1),
+                new QuizItem("q2", "下雨时该走哪条？",
+                    List.of("阳光路", "伞路", "原地不动"), 1)
             ));
             return;
         }

@@ -9,44 +9,44 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
- * 分镜获取：loop 读本地 classpath JSON，其它概念返回试做占位（无 LLM，保证小于 500ms）。
- * 关联：ConceptNormalizer、Storyboard、后续 MotifTutorService。
+ * 分镜获取：有金牌资源的概念读 classpath JSON，其它返回试做占位。
+ * 关联：ConceptNormalizer、Storyboard、MotifTutorService。
  */
 public class StoryboardService {
 
-    private static final String LOOP_RESOURCE = "demos/loop/storyboard.json";
+    /** 已内置金牌分镜的概念 id */
+    private static final Set<String> GOLD_CONCEPTS = Set.of("loop", "variable", "condition");
 
     private final ConceptNormalizer normalizer;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    /** 注入概念规范化器；level 在 v0.1 对 loop 暂不区分分镜 */
     public StoryboardService(ConceptNormalizer normalizer) {
         this.normalizer = normalizer;
     }
 
     /**
-     * 按概念获取或生成分镜。normalize==loop 时读本地种子；否则返回试做占位。
-     * @param concept 原始概念文案
-     * @param level   简版等级（v0.1 loop 共用同一分镜，可未使用）
+     * 按概念获取分镜。金牌概念读 demos/{id}/storyboard.json；否则占位。
      */
     public Storyboard getOrCreate(String concept, int level) {
         String normalized = normalizer.normalize(concept);
-        if ("loop".equals(normalized)) {
-            return loadLoopStoryboard();
+        if (GOLD_CONCEPTS.contains(normalized)) {
+            return loadGoldStoryboard(normalized);
         }
         return placeholder(normalized, concept);
     }
 
-    /** 从 classpath 读取 loop 金牌分镜 JSON */
-    private Storyboard loadLoopStoryboard() {
-        try (InputStream in = StoryboardService.class.getClassLoader().getResourceAsStream(LOOP_RESOURCE)) {
+    /** 从 classpath 读取金牌分镜 JSON */
+    private Storyboard loadGoldStoryboard(String conceptId) {
+        String resource = "demos/" + conceptId + "/storyboard.json";
+        try (InputStream in = StoryboardService.class.getClassLoader().getResourceAsStream(resource)) {
             if (in == null) {
-                throw new IllegalStateException("缺少 classpath 资源: " + LOOP_RESOURCE);
+                throw new IllegalStateException("缺少 classpath 资源: " + resource);
             }
             JsonNode root = mapper.readTree(in);
-            String title = root.path("title").asString("循环");
+            String title = root.path("title").asString(conceptId);
             List<Storyboard.Beat> beats = new ArrayList<>();
             JsonNode beatsNode = root.path("beats");
             if (beatsNode.isArray()) {
@@ -59,9 +59,9 @@ public class StoryboardService {
                     ));
                 }
             }
-            return new Storyboard("loop", title, List.copyOf(beats));
+            return new Storyboard(conceptId, title, List.copyOf(beats));
         } catch (JacksonException | IOException e) {
-            throw new IllegalStateException("读取 loop storyboard 失败", e);
+            throw new IllegalStateException("读取 storyboard 失败: " + resource, e);
         }
     }
 

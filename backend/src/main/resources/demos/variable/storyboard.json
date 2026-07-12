@@ -1,0 +1,10 @@
+{
+  "concept": "variable",
+  "title": "变量",
+  "beats": [
+    {"who": "小明", "action": "拿来一只空盒子，贴上标签「苹果数」", "result": "盒子有名字，里面还是空的", "principle": "变量=有名字的盒子"},
+    {"who": "小明", "action": "放进 3 个苹果", "result": "标签旁显示出 3", "principle": "赋值：往盒子里放东西"},
+    {"who": "小明", "action": "拿出 1 个再放进 3 个", "result": "数字变成 5", "principle": "盒子里的东西可以改"},
+    {"who": "旁白", "action": "指着标签", "result": "还叫「苹果数」，值已经变了", "principle": "名字不变，值可变"}
+  ]
+}
