@@ -99,6 +99,15 @@ public class MotifTutorService {
         return correct;
     }
 
+    /** 答题结果：是否答对 + 更新后的会话 */
+    public record AnswerResult(boolean correct, MotifSession session) {}
+
+    /** 答题并返回完整结果（供 HTTP 层包装） */
+    public AnswerResult answerResult(String id, String quizId, int index) {
+        boolean correct = answer(id, quizId, index);
+        return new AnswerResult(correct, get(id));
+    }
+
     /** 解析 demo：命中则挂 URL 并进入 MOTTO_QUIZ；未命中进入 DEMO */
     private void applyDemoAndPhase(MotifSession session) {
         Optional<Path> hit = demos.resolve(session.getConceptId(), session.getLevel());
