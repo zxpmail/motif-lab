@@ -27,8 +27,13 @@ public class StoryboardService {
         this.normalizer = normalizer;
     }
 
+    /** 是否已内置金牌分镜 */
+    public boolean isGold(String conceptId) {
+        return GOLD_CONCEPTS.contains(normalizer.normalize(conceptId));
+    }
+
     /**
-     * 按概念获取分镜。金牌概念读 demos/{id}/storyboard.json；否则占位。
+     * 按概念获取分镜。金牌概念读 demos/{id}/storyboard.json；否则返回占位（异步教案会覆盖）。
      */
     public Storyboard getOrCreate(String concept, int level) {
         String normalized = normalizer.normalize(concept);
@@ -65,13 +70,14 @@ public class StoryboardService {
         }
     }
 
-    /** 未知概念的本地占位分镜（标明试做，不调用 LLM） */
+    /** 未知概念的本地占位分镜（异步教案生成前的临时骨架） */
     private Storyboard placeholder(String conceptId, String rawConcept) {
         String title = rawConcept == null ? conceptId : rawConcept;
         List<Storyboard.Beat> beats = List.of(
-            new Storyboard.Beat("旁白", "引出概念「" + title + "」", "听者知道要学什么", "试做：开场"),
-            new Storyboard.Beat("角色", "做一次关键动作", "出现可见结果", "试做：演示核心"),
-            new Storyboard.Beat("旁白", "用一句话收束", "记住口诀要点", "试做：收束")
+            new Storyboard.Beat("旁白", "先想：不用「" + title + "」时哪里别扭？", "准备看对照", "开场：找别扭"),
+            new Storyboard.Beat("角色", "用笨办法硬做", "又慢又乱", "对照：错误做法"),
+            new Storyboard.Beat("角色", "换成聪明做法", "变简单、能复用", "对照：正确做法"),
+            new Storyboard.Beat("旁白", "收成一句口诀", "记住差在哪里", "收束")
         );
         return new Storyboard(conceptId, title, beats);
     }

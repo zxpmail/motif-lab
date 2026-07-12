@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 母题授课会话状态机。
- * 金牌缓存命中同步进 MOTTO_QUIZ；未命中则异步 LLM 生成动画。
- * 关联：ConceptNormalizer、StoryboardService、DemoCache、AnimationGenerator、MotifSession。
+ * 金牌缓存命中同步进 MOTTO_QUIZ；未命中则异步：教案包 → 动画。
+ * 关联：ConceptNormalizer、StoryboardService、DemoCache、AnimationGenerator、TeachingPackGenerator。
  */
 public class MotifTutorService {
 
@@ -30,10 +30,12 @@ public class MotifTutorService {
     private final DemoCache demos;
     /** 可空：单元测试或不启用生成时传 null */
     private final AnimationGenerator generator;
+    /** 可空：非金牌教案生成 */
+    private final TeachingPackGenerator teachingPacks;
     private final ConcurrentHashMap<String, MotifSession> sessions = new ConcurrentHashMap<>();
 
     public MotifTutorService(ConceptNormalizer normalizer, StoryboardService storyboards, DemoCache demos) {
-        this(normalizer, storyboards, demos, null);
+        this(normalizer, storyboards, demos, null, null);
     }
 
     public MotifTutorService(
@@ -41,10 +43,20 @@ public class MotifTutorService {
             StoryboardService storyboards,
             DemoCache demos,
             AnimationGenerator generator) {
+        this(normalizer, storyboards, demos, generator, null);
+    }
+
+    public MotifTutorService(
+            ConceptNormalizer normalizer,
+            StoryboardService storyboards,
+            DemoCache demos,
+            AnimationGenerator generator,
+            TeachingPackGenerator teachingPacks) {
         this.normalizer = normalizer;
         this.storyboards = storyboards;
         this.demos = demos;
         this.generator = generator;
+        this.teachingPacks = teachingPacks;
     }
 
     /** 开始一课：建会话、取分镜、解析金牌 demo 或异步生成 */
@@ -135,12 +147,14 @@ public class MotifTutorService {
     }
 
     /**
-     * 解析 demo：金牌命中 → URL + MOTTO_QUIZ；未命中 → DEMO + 异步生成。
+     * 解析 demo：金牌/缓存命中 → URL + MOTTO_QUIZ；未命中 → DEMO + 异步生成。
      */
     private void applyDemoAndPhase(MotifSession session) {
         session.setError(null);
-        Optional<Path> hit = demos.resolve(session.getConceptId(), session.getLevel());
+        Optional<Path> hit = demos.resolve(session.getConceptId(), session.getLevel(), session.getSceneSeed());
         if (hit.isPresent()) {
+            // 非金牌若有教案缓存，恢复分镜口诀题，避免仍显示空壳占位
+            restorePackIfPresent(session);
             session.setDemoUrl("/api/demos/" + session.getId());
             session.setPhase("MOTTO_QUIZ");
         } else {
@@ -150,24 +164,66 @@ public class MotifTutorService {
         }
     }
 
-    /** 缓存未命中时后台生成 HTML，写缓存并更新会话 */
+    /** 从 sidecar 恢复教案；没有则忽略 */
+    private void restorePackIfPresent(MotifSession session) {
+        if (storyboards.isGold(session.getConceptId()) || teachingPacks == null) {
+            return;
+        }
+        Optional<String> json = demos.resolvePackJson(
+                session.getConceptId(), session.getLevel(), session.getSceneSeed());
+        if (json.isEmpty()) {
+            return;
+        }
+        try {
+            TeachingPackGenerator.Pack pack = teachingPacks.parse(session.getConceptId(), json.get());
+            applyPack(session, pack);
+        } catch (RuntimeException ignored) {
+            // 旧缓存教案不合格时忽略，仍可播 HTML
+        }
+    }
+
+    /** 缓存未命中时后台：非金牌先教案，再生成 HTML */
     private void startAsyncGeneration(MotifSession session) {
         if (generator == null) {
             session.setError("动画生成器未就绪");
             return;
         }
         final String sessionId = session.getId();
+        final String conceptRaw = session.getConceptRaw();
         final String conceptId = session.getConceptId();
         final int level = session.getLevel();
-        final Storyboard board = session.getStoryboard();
         final String sceneSeed = session.getSceneSeed();
         final long token = session.getGenerationToken();
+        final boolean gold = storyboards.isGold(conceptId);
 
         CompletableFuture.runAsync(() -> {
             try {
-                String html = generator.generate(board, level, sceneSeed);
-                demos.put(conceptId, level, html);
                 MotifSession live = sessions.get(sessionId);
+                if (live == null || live.getGenerationToken() != token) {
+                    return;
+                }
+
+                Storyboard board = live.getStoryboard();
+                if (!gold) {
+                    if (teachingPacks == null) {
+                        live.setError("教案生成器未就绪");
+                        return;
+                    }
+                    TeachingPackGenerator.Pack pack =
+                            teachingPacks.generate(conceptRaw, conceptId, level, sceneSeed);
+                    if (live.getGenerationToken() != token) {
+                        return;
+                    }
+                    applyPack(live, pack);
+                    board = pack.storyboard();
+                    // 缓存教案 JSON，下次命中动画时可恢复分镜
+                    demos.putPackJson(conceptId, level, sceneSeed,
+                            toPackJson(pack));
+                }
+
+                String html = generator.generate(board, level, sceneSeed);
+                demos.put(conceptId, level, sceneSeed, html);
+                live = sessions.get(sessionId);
                 if (live == null || live.getGenerationToken() != token) {
                     return;
                 }
@@ -185,6 +241,60 @@ public class MotifTutorService {
         });
     }
 
+    private void applyPack(MotifSession session, TeachingPackGenerator.Pack pack) {
+        session.setStoryboard(pack.storyboard());
+        session.setMotto(pack.motto());
+        session.setQuiz(pack.quiz());
+    }
+
+    /** 把 Pack 再序列化成可缓存的 JSON（字段与 prompt 约定一致） */
+    private static String toPackJson(TeachingPackGenerator.Pack pack) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"title\":").append(jsonStr(pack.storyboard().title()));
+        sb.append(",\"motto\":").append(jsonStr(pack.motto()));
+        sb.append(",\"beats\":[");
+        List<Storyboard.Beat> beats = pack.storyboard().beats();
+        for (int i = 0; i < beats.size(); i++) {
+            Storyboard.Beat b = beats.get(i);
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append("{\"who\":").append(jsonStr(b.who()))
+                    .append(",\"action\":").append(jsonStr(b.action()))
+                    .append(",\"result\":").append(jsonStr(b.result()))
+                    .append(",\"principle\":").append(jsonStr(b.principle()))
+                    .append('}');
+        }
+        sb.append("],\"quiz\":[");
+        List<QuizItem> quiz = pack.quiz();
+        for (int i = 0; i < quiz.size(); i++) {
+            QuizItem q = quiz.get(i);
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append("{\"id\":").append(jsonStr(q.id()))
+                    .append(",\"question\":").append(jsonStr(q.question()))
+                    .append(",\"choices\":[");
+            for (int j = 0; j < q.choices().size(); j++) {
+                if (j > 0) {
+                    sb.append(',');
+                }
+                sb.append(jsonStr(q.choices().get(j)));
+            }
+            sb.append("],\"answerIndex\":").append(q.answerIndex()).append('}');
+        }
+        sb.append("]}");
+        return sb.toString();
+    }
+
+    private static String jsonStr(String s) {
+        if (s == null) {
+            return "\"\"";
+        }
+        return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "") + "\"";
+    }
+
     /** 仅在已进入 MOTTO_QUIZ（金牌同步路径）时填充口诀与题 */
     private void fillMottoQuizIfReady(MotifSession session) {
         if ("MOTTO_QUIZ".equals(session.getPhase()) || "DONE".equals(session.getPhase())) {
@@ -192,7 +302,7 @@ public class MotifTutorService {
         }
     }
 
-    /** 金牌概念用专属口诀题；其它用通用试做题 */
+    /** 金牌概念用专属口诀题；非金牌优先保留教案包已写内容 */
     private void fillMottoQuiz(MotifSession session) {
         String id = session.getConceptId();
         if ("loop".equals(id)) {
@@ -235,13 +345,17 @@ public class MotifTutorService {
             ));
             return;
         }
+        // 非金牌：教案包已写入则保留
+        if (session.getMotto() != null && session.getQuiz() != null && !session.getQuiz().isEmpty()) {
+            return;
+        }
         String title = session.getStoryboard() != null ? session.getStoryboard().title() : session.getConceptRaw();
-        session.setMotto(title + "：先看懂故事，再记住这一下。");
+        session.setMotto(title + "：看清「笨办法哪里别扭、聪明办法哪里省事」。");
         session.setQuiz(List.of(
-            new QuizItem("q1", "刚才动画主要在讲什么？",
-                List.of("随便玩玩", title, "和概念无关的东西"), 1),
-            new QuizItem("q2", "学完这一课你最该记住什么？",
-                List.of("口诀里那句话", "记住网页地址", "什么都不用记"), 0)
+            new QuizItem("q1", "这一课最该抓住的是什么？",
+                List.of("概念的名字怎么读", "不用它时哪里别扭、用了哪里省事", "网页好不好看"), 1),
+            new QuizItem("q2", "如果动画只喊概念名、没有对照，说明什么？",
+                List.of("已经学懂了", "还没讲清原理，该换故事或更简单", "可以结束了"), 1)
         ));
     }
 

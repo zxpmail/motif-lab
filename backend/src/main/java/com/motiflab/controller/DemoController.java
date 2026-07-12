@@ -43,7 +43,7 @@ public class DemoController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
-        Optional<Path> path = demoCache.resolve(session.getConceptId(), session.getLevel());
+        Optional<Path> path = demoCache.resolve(session.getConceptId(), session.getLevel(), session.getSceneSeed());
         if (path.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "演示文件不存在");
         }

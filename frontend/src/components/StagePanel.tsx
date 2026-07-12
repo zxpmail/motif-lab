@@ -39,7 +39,9 @@ export default function StagePanel({ session }: StagePanelProps) {
       )}
 
       {generating && (
-        <p className="text-xl text-amber-700 animate-pulse">动画生成中…</p>
+        <p className="text-xl text-amber-700 animate-pulse">
+          正在写分镜并生成动画（新概念可能要几十秒）…
+        </p>
       )}
 
       {error && (

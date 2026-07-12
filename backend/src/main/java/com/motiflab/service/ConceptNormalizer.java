@@ -37,8 +37,18 @@ public class ConceptNormalizer {
         return Math.max(0, Math.min(2, level));
     }
 
-    /** 生成 demo 缓存键：conceptId|L{n}|protocol */
+    /** 生成 demo 缓存键：conceptId|L{n}|protocol[|seed前8位] */
     public String cacheKey(String concept, int level, String protocolVersion) {
-        return normalize(concept) + "|L" + clampLevel(level) + "|" + protocolVersion;
+        return cacheKey(concept, level, protocolVersion, null);
+    }
+
+    /** 带 sceneSeed 的缓存键；seed 空则与三字段键相同 */
+    public String cacheKey(String concept, int level, String protocolVersion, String sceneSeed) {
+        String base = normalize(concept) + "|L" + clampLevel(level) + "|" + protocolVersion;
+        if (sceneSeed == null || sceneSeed.isBlank()) {
+            return base;
+        }
+        String seed = sceneSeed.length() <= 8 ? sceneSeed : sceneSeed.substring(0, 8);
+        return base + "|" + seed;
     }
 }

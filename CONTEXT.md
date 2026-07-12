@@ -2,12 +2,12 @@
 # 项目进度快照（极简）
 
 ## 当前在做什么
-修复 Provider：误填 Tepeu 的 DeepSeek `/anthropic` 地址会导致 LLM 404（模型看似不生效）。
+修复非金牌课质量：空壳分镜 → LLM 教案包（真分镜+口诀+题）再生成动画。
 
 ## 上次停在哪
-https://github.com/zxpmail/motif-lab · 本地 http://127.0.0.1:30142
+https://github.com/zxpmail/motif-lab · 本地 http://127.0.0.1:30142 · protocol v2
 
 ## 近期关键决定
-- Motif Lab 只用 OpenAI 兼容 `/chat/completions`；DeepSeek baseUrl = `https://api.deepseek.com/v1`
-- 保存/调用时自动把 `.../anthropic` 改写成 `/v1`
-- 金牌课（循环/变量/条件/函数）不走模型
+- 工厂模式等非金牌概念必须先「笨办法 vs 聪明办法」对照，禁止只喊概念名
+- 缓存键含 sceneSeed；换故事会重新生成
+- DeepSeek baseUrl 用 `/v1`（OpenAI 兼容）
