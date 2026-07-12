@@ -1,0 +1,14 @@
+backend/target/
+backend/*.db
+backend/*.db-*
+backend/data/
+frontend/node_modules/
+frontend/dist/
+.env
+.env.*
+*.key
+.tepeu/
+.motif-lab/
+.worktrees/
+.idea/
+.vscode/

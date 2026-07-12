@@ -1,0 +1,13 @@
+server:
+  port: 30142
+spring:
+  application:
+    name: motif-lab
+  datasource:
+    url: jdbc:sqlite:motif-lab.db
+    driver-class-name: org.sqlite.JDBC
+motiflab:
+  demo-cache-dir: ${user.dir}/data/demo-cache
+  protocol-version: v1
+  security:
+    master-key-file: ${user.home}/.motif-lab/master.key
