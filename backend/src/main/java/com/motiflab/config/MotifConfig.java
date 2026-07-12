@@ -1,5 +1,6 @@
 package com.motiflab.config;
 
+import com.motiflab.service.AnimationGenerator;
 import com.motiflab.service.ConceptNormalizer;
 import com.motiflab.service.DemoCache;
 import com.motiflab.service.MotifTutorService;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 
 /**
  * Motif Lab 领域 Bean 装配：规范化、分镜、demo 缓存、授课服务。
+ * Crypto/Provider/Llm/AnimationGenerator 由 @Component 注册。
  * 关联：application.yml 中 motiflab.* 配置项。
  */
 @Configuration
@@ -41,12 +43,13 @@ public class MotifConfig {
         return new DemoCache(Path.of(demoCacheDir), protocolVersion);
     }
 
-    /** 授课会话状态机 */
+    /** 授课会话状态机（注入可选的 AnimationGenerator） */
     @Bean
     public MotifTutorService motifTutorService(
             ConceptNormalizer conceptNormalizer,
             StoryboardService storyboardService,
-            DemoCache demoCache) {
-        return new MotifTutorService(conceptNormalizer, storyboardService, demoCache);
+            DemoCache demoCache,
+            AnimationGenerator animationGenerator) {
+        return new MotifTutorService(conceptNormalizer, storyboardService, demoCache, animationGenerator);
     }
 }

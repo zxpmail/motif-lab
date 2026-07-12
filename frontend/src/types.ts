@@ -39,6 +39,16 @@ export interface MotifSession {
   quiz: QuizItem[]
   phase: LessonPhase
   correctQuizIds: string[]
+  /** 异步生成失败时的可读错误 */
+  error?: string | null
+}
+
+/** LLM Provider 设置（GET 时 apiKey 为脱敏值） */
+export interface ProviderSettings {
+  apiKey: string | null
+  baseUrl: string
+  model: string
+  enabled: boolean
 }
 
 /** 统一 API 包装 */

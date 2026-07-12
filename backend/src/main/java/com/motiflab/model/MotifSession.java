@@ -20,6 +20,8 @@ public class MotifSession {
     private String motto;
     private List<QuizItem> quiz;
     private String phase;
+    /** 异步生成失败时的可读错误；成功或金牌命中时为 null */
+    private String error;
     /** 已答对的题目 id，用于判定 DONE */
     private Set<String> correctQuizIds = new HashSet<>();
 
@@ -101,6 +103,14 @@ public class MotifSession {
 
     public void setPhase(String phase) {
         this.phase = phase;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error;
     }
 
     public Set<String> getCorrectQuizIds() {

@@ -1,5 +1,5 @@
-// 授课 API 客户端：统一 fetch，失败抛错。关联：types、ChatPanel、QuizCard。
-import type { AnswerResult, ApiResponse, MotifSession } from '../types'
+// 授课 API 客户端：统一 fetch，失败抛错。关联：types、ChatPanel、QuizCard、ProviderSettings。
+import type { AnswerResult, ApiResponse, MotifSession, ProviderSettings } from '../types'
 
 /** 解析 JSON；success 为 false 时抛错 */
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -51,5 +51,18 @@ export function answer(
   return request<AnswerResult>(`/api/lessons/${id}/answer`, {
     method: 'POST',
     body: JSON.stringify({ quizId, choiceIndex }),
+  })
+}
+
+/** 读取 Provider 设置（apiKey 已脱敏） */
+export function getProvider(): Promise<ProviderSettings> {
+  return request<ProviderSettings>('/api/provider')
+}
+
+/** 保存 Provider；apiKey 空字符串表示保留原密钥 */
+export function saveProvider(body: ProviderSettings): Promise<ProviderSettings> {
+  return request<ProviderSettings>('/api/provider', {
+    method: 'PUT',
+    body: JSON.stringify(body),
   })
 }

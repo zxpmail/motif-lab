@@ -15,8 +15,8 @@ export default function StagePanel({ session }: StagePanelProps) {
     )
   }
 
-  const { storyboard, demoUrl, phase } = session
-  const generating = phase === 'DEMO' && !demoUrl
+  const { storyboard, demoUrl, phase, error } = session
+  const generating = phase === 'DEMO' && !demoUrl && !error
 
   return (
     <div className="h-full flex flex-col gap-4 p-6 overflow-auto">
@@ -40,6 +40,12 @@ export default function StagePanel({ session }: StagePanelProps) {
 
       {generating && (
         <p className="text-xl text-amber-700 animate-pulse">动画生成中…</p>
+      )}
+
+      {error && (
+        <p className="text-lg text-red-600" role="alert">
+          {error}
+        </p>
       )}
 
       {demoUrl && (

@@ -3,7 +3,7 @@ server:
 spring:
   application:
     name: motif-lab
-  # Task 8 再接 Provider/SQLite/LLM；当前排除以免无 schema / 无 API Key 时启动失败
+  # 继续排除 DataSource / Spring AI 自动配置：无 Key 也能启动；LLM 走 HttpClient
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration

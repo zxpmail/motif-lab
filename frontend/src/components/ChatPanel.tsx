@@ -45,7 +45,7 @@ export default function ChatPanel({ session, onSessionUpdate }: ChatPanelProps) 
   return (
     <div className="h-full flex flex-col gap-6 p-6 overflow-auto">
       <header>
-        <h1 className="text-3xl font-bold text-gray-900">母题实验室</h1>
+        <h1 className="text-3xl font-bold text-gray-900">授课</h1>
         <p className="mt-1 text-lg text-gray-600">先故事，再动画，最后检验</p>
       </header>
 

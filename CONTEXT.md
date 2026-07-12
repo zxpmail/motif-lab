@@ -2,12 +2,12 @@
 # 项目进度快照（极简）
 
 ## 当前在做什么
-v0.1 实现计划已写好，待选择执行方式并开工。
+分包代理执行 v0.1 计划：Task 1 脚手架已完成，进行 Task 2。
 
 ## 上次停在哪
-- 设计：`docs/superpowers/specs/2026-07-12-motif-lab-design.md`
 - 计划：`docs/superpowers/plans/2026-07-12-motif-lab-v0.1.md`
+- Task 1 commit：`2d43e88` + 卫生修复 `725171f`
 
 ## 近期关键决定
-- 薄壳新项目；母题故事动画；骨架+缓存；首版「循环」
-- 端口规划 30142（避开 Tepeu 30141）
+- 端口 30142；薄壳 Spring Boot + Vite/React
+- 执行方式：分包代理（每任务实现 + 规格审 + 质量审）
